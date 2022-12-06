@@ -1,0 +1,31 @@
+﻿<Window
+    Height="720"
+    Title="NFA Convertor"
+    Width="1280"
+    mc:Ignorable="d"
+    x:Class="NFA_Convertor.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="File">
+                <MenuItem Header="New File" x:Name="MenuNewFile" />
+                <MenuItem Header="Open" x:Name="MenuOpen" />
+                <MenuItem Header="Save" x:Name="MenuSave" />
+                <MenuItem Header="Exit" x:Name="MenuExit" />
+            </MenuItem>
+            <MenuItem Header="Convert">
+                <MenuItem Header="to DFA" x:Name="MenuConvertNfa" />
+                <MenuItem Header="to DFA as Text" x:Name="MenuConvertNfaText" />
+            </MenuItem>
+            <MenuItem Header="Alphabet" x:Name="MenuAlphabet" />
+        </Menu>
+        <TabControl x:Name="TabControl" />
+
+    </DockPanel>
+
+
+</Window>
