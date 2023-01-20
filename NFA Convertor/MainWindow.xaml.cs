@@ -32,6 +32,36 @@ public partial class MainWindow
         MenuConvertNfaText.Click += MenuConvertNfaTextOnClick;
         MenuSave.Click += MenuSaveAsOnClick;
         MenuOpen.Click += MenuOpenOnClick;
+        MenuConvertDfaToMDFA.Click += MenuConvertOptimizeDfaOnClick;
+        MenuConvertDfaToMDFAText.Click += MenuConvertOptimizeDfaTextOnClick;
+    }
+
+    private void MenuConvertOptimizeDfaTextOnClick(object sender, RoutedEventArgs e)
+    {
+        var dfa = CurrentCanvas.Machine;
+        if (dfa.StartNode == null)
+        {
+            MessageBox.Show("There is no Start Node in this Machine.", "Error");
+            return;
+        }
+
+        var optimizedDfa = MachineConvertor.ConvertMachineAsText(dfa, true);
+
+        SaveConvertedMachine(optimizedDfa);
+    }
+
+    private void MenuConvertOptimizeDfaOnClick(object sender, RoutedEventArgs e)
+    {
+        var dfa = CurrentCanvas.Machine;
+        if (dfa.StartNode == null)
+        {
+            MessageBox.Show("There is no Start Node in this Machine.", "Error");
+            return;
+        }
+
+        var optimizedDfa = MachineConvertor.DfaOptimization(dfa);
+        var newCanvas = NewTab();
+        newCanvas.LoadMachine(optimizedDfa);
     }
 
     private void MenuOpenOnClick(object sender, RoutedEventArgs e) //load a file
@@ -93,8 +123,7 @@ public partial class MainWindow
         newCanvas.LoadMachine(dfa);
     }
 
-    private void
-        MenuConvertNfaTextOnClick(object sender, RoutedEventArgs e) //convert nfa to dfa and save as a text file
+    private void MenuConvertNfaTextOnClick(object sender, RoutedEventArgs e) //convert nfa to dfa and save as a text file
     {
         var nfa = CurrentCanvas.Machine;
         if (nfa.StartNode == null)
@@ -103,8 +132,13 @@ public partial class MainWindow
             return;
         }
 
-        var dfa = MachineConvertor.ConvertNfaAsText(nfa);
+        var dfa = MachineConvertor.ConvertMachineAsText(nfa, false);
 
+        SaveConvertedMachine(dfa);
+    }
+
+    private void SaveConvertedMachine(string machine)
+    {
         var window = new SaveFileDialog
         {
             DefaultExt = "mcn",
@@ -114,7 +148,7 @@ public partial class MainWindow
 
         if (window.ShowDialog() is true)
         {
-            File.WriteAllText(window.FileName, dfa);
+            File.WriteAllText(window.FileName, machine);
         }
     }
 

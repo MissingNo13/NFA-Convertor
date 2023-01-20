@@ -21,11 +21,11 @@ public class Machine
     public Node StartNode;
     private Line StartLine = new Line(){Stroke = Brushes.Black, StrokeThickness = 1.0};
 
-    public Node AddNode(List<Node> subNodes = null, bool isStater = false, bool isFinal = false)
+    public Node AddNode(List<Node> subNodes = null, bool isStarter = false, bool isFinal = false)
     {
         var newNode = new Node()
         {
-            Index = Counter, SubNodes = subNodes , IsFinal = isFinal, IsStarter = isStater,
+            Index = Counter, SubNodes = subNodes , IsFinal = isFinal, IsStarter = isStarter,
             HasSubNodes = subNodes != null
         };
 
@@ -87,19 +87,15 @@ public class Machine
         
     /***************************************TRANSITIONS*********************************************/
 
-    private Transition SearchTransition(Node from, Node to)
+    public Transition SearchTransition(Node from, Node to)
     {
-        foreach (var transition in from.Transitions)
-        {
-            if (transition.From.Equals(from) && transition.To.Equals(to))
-            {
-                return transition;
-            }
-        }
-
-        return null;
+        return from.Transitions.FirstOrDefault(transition => transition.From.Equals(from) && transition.To.Equals(to));
     }
 
+    public Transition SearchTransition(Node from, string alphabet)
+    {
+        return from.Transitions.FirstOrDefault(transition => transition.From.Equals(from) && transition.Letters.Contains(alphabet));
+    }
 
     public void RemoveTransition(Shape shape, CustomCanvas canvas)
     {
@@ -161,7 +157,8 @@ public class Machine
         var transition = SearchTransition(from, to);
         if (transition == null) transition = CreateTransition(from, to);
 
-        transition.Letters.Add(letter);
+        if (!transition.Letters.Contains(letter))
+            transition.Letters.Add(letter);
         transition.Label.Content = transition.LetterList;
     }
 

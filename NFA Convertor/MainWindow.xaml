@@ -20,6 +20,8 @@
             <MenuItem Header="Convert">
                 <MenuItem Header="to DFA" x:Name="MenuConvertNfa" />
                 <MenuItem Header="to DFA as Text" x:Name="MenuConvertNfaText" />
+                <MenuItem Header="Optimize DFA" x:Name="MenuConvertDfaToMDFA" />
+                <MenuItem Header="Optimize DFA as Text" x:Name="MenuConvertDfaToMDFAText" />
             </MenuItem>
             <MenuItem Header="Alphabet" x:Name="MenuAlphabet" />
         </Menu>

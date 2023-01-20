@@ -21,4 +21,21 @@ public class Node
     public bool IsFinal, IsStarter, HasSubNodes;
     public List<Node> SubNodes = new List<Node>();
     public readonly List<Transition> Transitions = new List<Transition>();
+
+    private bool Equals(Node other)
+    {
+        return _index == other._index;
+    }
+
+    public override bool Equals(object obj)
+    {
+        if (ReferenceEquals(null, obj)) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        return obj.GetType() == this.GetType() && Equals((Node) obj);
+    }
+
+    public override int GetHashCode()
+    {
+        return _index;
+    }
 }

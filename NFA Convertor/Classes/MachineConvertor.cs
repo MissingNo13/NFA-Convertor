@@ -109,9 +109,10 @@ public static class MachineConvertor
         return newMachine;
     }
 
-    public static string ConvertNfaAsText(Machine machine)
+    public static string ConvertMachineAsText(Machine machine,bool isDfa)
     {
-        var inputGen = new Func<string>(() =>
+        var result = !isDfa ? ConvertNfa(machine) : DfaOptimization(machine);
+        string InputGen()
         {
             var alphaTxt = "Alphabet: {" + string.Join(", ", machine.Alphabet) + "}";
 
@@ -156,14 +157,10 @@ public static class MachineConvertor
                     }
                 }
             }
+            return $"[INPUT]\n\n{alphaTxt}\n\n{nodesTxt}\n\n{startNodeTxt}\n\n{acceptNodesTxt}\n\n{transitionsTxt}";
+        }
 
-            return "[INPUT]\n\n" + alphaTxt + "\n\n" + nodesTxt + "\n\n" + startNodeTxt + "\n\n" + acceptNodesTxt +
-                   "\n\n" + transitionsTxt;
-        });
-
-        var result = ConvertNfa(machine);
-
-        var outputGen = new Func<string>(() =>
+        string OutputGen()
         {
             var alphaTxt = "Alphabet: {" + string.Join(", ", machine.Alphabet) + "}";
 
@@ -229,22 +226,21 @@ public static class MachineConvertor
                 }
             }
 
-            return "[OUTPUT]\n\n" + alphaTxt + "\n\n" + nodesTxt + "\n\n" + subNodesTxt + "\n" + startNodeTxt +
-                   "\n\n" + acceptNodesTxt + "\n\n" + transitionsTxt;
-        });
-
-
-        return inputGen.Invoke() + "\n\n" + outputGen.Invoke();
-    }
-
-    private static bool CheckFinal(List<Node> nodes)
-    {
-        foreach (var node in nodes)
-        {
-            if (node.IsFinal) return true;
+            return $"[OUTPUT]\n\n{alphaTxt}\n\n{nodesTxt}\n\n{subNodesTxt}\n{startNodeTxt}\n\n{acceptNodesTxt}\n\n{transitionsTxt}";
         }
 
-        return false;
+
+        return $"{InputGen()}\n\n{OutputGen()}";
+    }
+
+    private static bool CheckStarter(List<Node> nodes)
+    {
+        return nodes.Any(node => node.IsStarter);
+    }
+    
+    private static bool CheckFinal(List<Node> nodes)
+    {
+        return nodes.Any(node => node.IsFinal);
     }
 
     public static Machine LoadFromStruct(MachineStruct mStruct)
@@ -347,6 +343,156 @@ public static class MachineConvertor
 
     }
 
+    
+    //DFA Optimization
+
+    public static Machine DfaOptimization(Machine machine)
+    {
+        var newMachine = new Machine(){Alphabet = machine.Alphabet};
+        
+        var availableNodes = new List<Node>();//to store reachable Nodes
+        
+        void SetReachableNodes(Node node)
+        {
+            if (availableNodes.Contains(node)) return;
+            availableNodes.Add(node);
+            foreach (var transition in node.Transitions.Where(transition => Equals(transition.From, node))) 
+                SetReachableNodes(transition.To);
+
+        }
+        SetReachableNodes(machine.StartNode);
+        
+        var lastIterationSets = new List<HashSet<Node>>();//stores sets for previous iteration
+        var nonFinals = new HashSet<Node>(); 
+        var finals = new HashSet<Node>();
+        lastIterationSets.Add(nonFinals); 
+        lastIterationSets.Add(finals);
+        foreach (var node in availableNodes)
+        {
+            if (node.IsFinal)finals.Add(node);
+            else nonFinals.Add(node);
+        }
+        
+        
+        
+        while (true)
+        {
+            var sets = new List<HashSet<Node>>(); //stores sets for current iteration
+            foreach (var set in lastIterationSets)
+            {
+                if (set.Count < 2)
+                {
+                    sets.Add(set);
+                    continue;
+                }
+                
+                NewSet(set.ToArray()[0], sets);
+
+                var i = 0;
+                var j = 1;
+                while (j < set.Count)
+                {
+                    if (IsEquivalent(set.ToArray()[i], set.ToArray()[j]))
+                    {
+                        GetSet(set.ToArray()[i],sets).Add(set.ToArray()[j]);
+                    }
+                    else if (j-1>i)
+                    {
+                        i++;
+                        continue;
+                    }
+                    else if (j-1 == i)
+                    {
+                        NewSet(set.ToArray()[j],sets);
+                    }
+
+                    j++;
+                    i = 0;
+                }
+            }
+
+            var isIterationsEqual = true;
+            foreach (var set in sets)
+            {
+                isIterationsEqual = CheckEquality(set);
+
+                if (!isIterationsEqual) break;
+            }
+
+            if (isIterationsEqual) break;
+            lastIterationSets = sets;
+        }
+
+        bool CheckEquality(HashSet<Node> set)
+        {
+            return lastIterationSets.Any(set.SetEquals);
+        }
+        
+        
+        //creating new nodes
+
+        foreach (var set in lastIterationSets)
+        {
+            var node = newMachine.AddNode(set.ToList(), CheckStarter(set.ToList()), CheckFinal(set.ToList()));
+            if (node.IsStarter) newMachine.StartNode = node;
+        }
+        
+        //creating new transitions
+
+        foreach (var node in newMachine.Nodes)
+        {
+            foreach (var alphabet in newMachine.Alphabet)
+            {
+                foreach (var subNode in node.SubNodes)
+                {
+                    var toSubNode = machine.SearchTransition(subNode, alphabet)?.To;
+                    foreach (var toNode in newMachine.Nodes)
+                    {
+                        if (toNode.SubNodes.Contains(toSubNode))
+                        {
+                            newMachine.AddTransition(node, toNode, alphabet);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        //-------------------------------------------------------------------------------------------------------
+
+        HashSet<Node> GetSet(Node node, List<HashSet<Node>> sets)
+        {
+            return sets.First(set => set.Contains(node));
+        }
+
+        bool IsEquivalent(Node node1, Node node2)
+        {
+            foreach (var alphabet in machine.Alphabet)
+            {
+                var set1 = lastIterationSets.FirstOrDefault(set => set.Contains(machine.SearchTransition(node1, alphabet)?.To));
+                var set2 = lastIterationSets.FirstOrDefault(set => set.Contains(machine.SearchTransition(node2, alphabet)?.To));       
+                if (set1 != null && !set1.Equals(set2)) return false;
+            }
+
+            return true;
+        }
+
+        void NewSet(Node node, List<HashSet<Node>> sets)
+        {
+            foreach (var set in sets)
+            {
+                if (set.Contains(node))
+                {
+                    return;
+                }
+            }
+
+            var newSet = new HashSet<Node>();
+            newSet.Add(node);
+            sets.Add(newSet);
+        }
+
+        return newMachine;
+    }
 }
 
 [Serializable]
